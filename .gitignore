@@ -1,0 +1,23 @@
+# macOS system files
+.DS_Store
+
+# Editor settings
+.vscode/
+.idea/
+
+# Go build artifacts
+*.exe
+*.out
+*.test
+*.log
+
+# Binaries
+bin/
+build/
+dist/
+
+# Dependency directories (if any)
+vendor/
+
+# Logs
+*.log
