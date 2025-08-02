@@ -9,27 +9,44 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Harshi-itaSinha/target-engine/internal/config"
+	"github.com/Harshi-itaSinha/target-engine/internal/handler"
+	"github.com/Harshi-itaSinha/target-engine/internal/middleware"
+	"github.com/Harshi-itaSinha/target-engine/internal/repository"
+	"github.com/Harshi-itaSinha/target-engine/internal/service"
 	"github.com/Harshi-itaSinha/target-engine/monitoring"
 	"github.com/gorilla/mux"
 )
 
 func main() {
-	
-	router := setupRouter()
-    
-    metrics := monitoring.NewMetrics()
-	go startMetricsServer("9090", metrics)
-	
+
+	cfg := config.LoadConfig()
+	repo := repository.NewMemoryRepository()
+	defer repo.Close()
+	targetingService := service.NewTargetingService(repo, cfg)
+
+	deliveryHandler := handler.NewDeliveryHandler(targetingService)
+
+   
+	var metrics *monitoring.Metrics
+	if cfg.Metrics.Enabled {
+		metrics = monitoring.NewMetrics()
+	}
+
+	router := setupRouter(deliveryHandler, cfg, metrics)
+
+	if cfg.Metrics.Enabled {
+		go startMetricsServer(cfg.Metrics.Port, metrics)
+	}
 
 	server := &http.Server{
-		Addr:         ":8080",              
+		Addr:         ":8080",
 		Handler:      router,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	
 	go func() {
 		log.Println("Starting server on port 8080")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -37,7 +54,6 @@ func main() {
 		}
 	}()
 
-	
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -54,13 +70,26 @@ func main() {
 	log.Println("Server exited gracefully")
 }
 
-func setupRouter() *mux.Router {
+func setupRouter(deliveryHandler *handler.DeliveryHandler, cfg *config.Config, metrics *monitoring.Metrics) *mux.Router {
 
 	router := mux.NewRouter()
-    apiRouter := router.PathPrefix("/v1").Subrouter()
-	apiRouter.HandleFunc("/delivery", getCampaigns).Methods("GET")
-	apiRouter.HandleFunc("/stats", getStats).Methods("GET")
-	router.HandleFunc("/health", healthCheck).Methods("GET")
+
+	// Apply global middleware
+	router.Use(middleware.RequestID)
+	router.Use(middleware.Logger)
+	router.Use(middleware.CORS)
+	router.Use(middleware.Recovery)
+	router.Use(middleware.Health)
+	router.Use(middleware.Timeout(10 * time.Second))
+
+	if cfg.Metrics.Enabled && metrics != nil {
+		router.Use(metrics.MetricsMiddleware)
+	}
+
+	apiRouter := router.PathPrefix("/v1").Subrouter()
+	apiRouter.HandleFunc("/delivery", deliveryHandler.GetCampaigns).Methods("GET")
+	apiRouter.HandleFunc("/stats", deliveryHandler.GetStats).Methods("GET")
+	router.HandleFunc("/health", deliveryHandler.Health).Methods("GET")
 
 	return router
 }
@@ -78,20 +107,4 @@ func startMetricsServer(port string, metrics *monitoring.Metrics) {
 	if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Printf("Metrics server error: %v", err)
 	}
-}
-
-
-func getCampaigns(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Mock campaigns response"))
-}
-
-func getStats(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Mock stats response"))
-}
-
-func healthCheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
 }

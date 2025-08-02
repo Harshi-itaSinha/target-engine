@@ -29,9 +29,9 @@ type TargetingRule struct {
 
 // DeliveryRequest represents the incoming request parameters
 type DeliveryRequest struct {
-	App     string `json:"app" validate:"required"`
+	OS      string `json:"os" validate:"required,oneof=android ios"`
 	Country string `json:"country" validate:"required"`
-	OS      string `json:"os" validate:"required"`
+	App     string `json:"app" validate:"required"`
 }
 
 // DeliveryResponse represents the response for matching campaigns
