@@ -215,14 +215,14 @@ func (s *TargetingService) setToQueryCache(key string, result []*model.DeliveryR
 	s.cache.mutex.Lock()
 	defer s.cache.mutex.Unlock()
 
-	// Implement simple LRU eviction if cache is full
-	// if len(s.cache.queryCache) >= s.config.Cache.MaxSize {
-	// 	// Remove oldest entries (simple approach - in production, use proper LRU)
-	// 	for k := range s.cache.queryCache {
-	// 		delete(s.cache.queryCache, k)
-	// 		break
-	// 	}
-	// }
+	//Implement simple LRU eviction if cache is full
+	if len(s.cache.queryCache) >= s.config.Cache.MaxSize {
+		// Remove oldest entries (simple approach - in production, use proper LRU)
+		for k := range s.cache.queryCache {
+			delete(s.cache.queryCache, k)
+			break
+		}
+	}
 
 	s.cache.queryCache[key] = result
 }
