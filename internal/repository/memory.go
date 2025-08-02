@@ -9,7 +9,6 @@ import (
 	model "github.com/Harshi-itaSinha/target-engine/internal/models"
 )
 
-// MemoryRepository implements Repository interface using in-memory storage
 type MemoryRepository struct {
 	campaigns      map[string]*model.Campaign
 	targetingRules map[string][]*model.TargetingRule // keyed by campaign_id
@@ -18,7 +17,7 @@ type MemoryRepository struct {
 	nextRuleID     int64
 }
 
-// NewMemoryRepository creates a new in-memory repository
+
 func NewMemoryRepository() *MemoryRepository {
 	repo := &MemoryRepository{
 		campaigns:      make(map[string]*model.Campaign),
@@ -27,40 +26,36 @@ func NewMemoryRepository() *MemoryRepository {
 		nextRuleID:     1,
 	}
 
-	// Initialize with sample data
+	
 	repo.initializeSampleData()
 
 	return repo
 }
 
-// Campaign returns the campaign repository
+
 func (r *MemoryRepository) Campaign() CampaignRepository {
 	return r
 }
 
-// TargetingRule returns the targeting rule repository
 func (r *MemoryRepository) TargetingRule() TargetingRuleRepository {
 	return r
 }
 
-// Close closes the repository connection
 func (r *MemoryRepository) Close() error {
 	return nil
 }
 
-// Health checks if the repository is healthy
+
 func (r *MemoryRepository) Health(ctx context.Context) error {
 	return nil
 }
 
-// Migrate runs database migrations (no-op for memory)
+
 func (r *MemoryRepository) Migrate(ctx context.Context) error {
 	return nil
 }
 
-// Campaign Repository Methods
 
-// GetActiveCampaigns returns all active campaigns
 func (r *MemoryRepository) GetActiveCampaigns(ctx context.Context) ([]*model.Campaign, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -75,7 +70,7 @@ func (r *MemoryRepository) GetActiveCampaigns(ctx context.Context) ([]*model.Cam
 	return activeCampaigns, nil
 }
 
-// GetCampaignByID returns a campaign by its ID
+
 func (r *MemoryRepository) GetCampaignByID(ctx context.Context, id string) (*model.Campaign, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -88,7 +83,6 @@ func (r *MemoryRepository) GetCampaignByID(ctx context.Context, id string) (*mod
 	return campaign, nil
 }
 
-// CreateCampaign creates a new campaign
 func (r *MemoryRepository) CreateCampaign(ctx context.Context, campaign *model.Campaign) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -104,7 +98,6 @@ func (r *MemoryRepository) CreateCampaign(ctx context.Context, campaign *model.C
 	return nil
 }
 
-// UpdateCampaign updates an existing campaign
 func (r *MemoryRepository) UpdateCampaign(ctx context.Context, campaign *model.Campaign) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -119,7 +112,6 @@ func (r *MemoryRepository) UpdateCampaign(ctx context.Context, campaign *model.C
 	return nil
 }
 
-// DeleteCampaign deletes a campaign by ID
 func (r *MemoryRepository) DeleteCampaign(ctx context.Context, id string) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -165,7 +157,7 @@ func (r *MemoryRepository) GetTargetingRules(ctx context.Context) ([]*model.Targ
 	return allRules, nil
 }
 
-// GetTargetingRulesByCampaignID returns targeting rules for a specific campaign
+
 func (r *MemoryRepository) GetTargetingRulesByCampaignID(ctx context.Context, campaignID string) ([]*model.TargetingRule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -178,7 +170,7 @@ func (r *MemoryRepository) GetTargetingRulesByCampaignID(ctx context.Context, ca
 	return rules, nil
 }
 
-// CreateTargetingRule creates a new targeting rule
+
 func (r *MemoryRepository) CreateTargetingRule(ctx context.Context, rule *model.TargetingRule) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -194,7 +186,7 @@ func (r *MemoryRepository) CreateTargetingRule(ctx context.Context, rule *model.
 	return nil
 }
 
-// UpdateTargetingRule updates an existing targeting rule
+
 func (r *MemoryRepository) UpdateTargetingRule(ctx context.Context, rule *model.TargetingRule) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -206,10 +198,10 @@ func (r *MemoryRepository) UpdateTargetingRule(ctx context.Context, rule *model.
 
 	rule.UpdatedAt = time.Now()
 
-	// Update in both maps
+
 	r.rulesByID[rule.ID] = rule
 
-	// Update in the campaign rules slice
+	
 	rules := r.targetingRules[existingRule.CampaignID]
 	for i, r := range rules {
 		if r.ID == rule.ID {
@@ -221,26 +213,12 @@ func (r *MemoryRepository) UpdateTargetingRule(ctx context.Context, rule *model.
 	return nil
 }
 
-// DeleteTargetingRule deletes a targeting rule by ID
 func (r *MemoryRepository) DeleteTargetingRule(ctx context.Context, id int64) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	// rule, exists := r.rulesByID[id]
-	// if !exists {
-	// 	return fmt.Errorf("targeting rule with ID %d not found", id)
-	// }
-
+	
 	delete(r.rulesByID, id)
-
-	// Remove from campaign rules slice
-	// rules := r.targetingRules[rule.CampaignID]
-	// for i, r := range rules {
-	// 	if r.ID == id {
-	// 		r.targetingRules[rule.CampaignID] = append(rules[:i], rules[i+1:]...)
-	// 		break
-	// 	}
-	// }
 
 	return nil
 }
@@ -255,22 +233,21 @@ func (r *MemoryRepository) DeleteTargetingRulesByCampaignID(ctx context.Context,
 		return nil
 	}
 
-	// Remove from rulesByID map
+	
 	for _, rule := range rules {
 		delete(r.rulesByID, rule.ID)
 	}
 
-	// Remove from targetingRules map
+
 	delete(r.targetingRules, campaignID)
 
 	return nil
 }
 
-// initializeSampleData loads the sample data from the problem statement
 func (r *MemoryRepository) initializeSampleData() {
 	now := time.Now()
 
-	// Sample campaigns
+
 	campaigns := []*model.Campaign{
 		{
 			ID:        "spotify",
@@ -301,7 +278,6 @@ func (r *MemoryRepository) initializeSampleData() {
 		},
 	}
 
-	// Sample targeting rules
 	targetingRules := []*model.TargetingRule{
 		{
 			ID:             1,
@@ -328,13 +304,13 @@ func (r *MemoryRepository) initializeSampleData() {
 		},
 	}
 
-	// Initialize campaigns
+	
 	for _, campaign := range campaigns {
 		r.campaigns[campaign.ID] = campaign
 	}
 
-	// Initialize targeting rules
-	r.nextRuleID = 4 // Start from 4 since we have 3 sample rules
+	
+	r.nextRuleID = 4 
 	for _, rule := range targetingRules {
 		r.targetingRules[rule.CampaignID] = append(r.targetingRules[rule.CampaignID], rule)
 		r.rulesByID[rule.ID] = rule
