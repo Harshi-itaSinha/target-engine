@@ -1,9 +1,15 @@
+// Package config loads the configurations for different environment
 package config
 
 import (
+	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/stretchr/testify/assert/yaml"
 )
 
 // Config holds all configuration for the application
@@ -39,11 +45,11 @@ type MetricsConfig struct {
 
 // DatabaseConfig holds database configuration
 type DatabaseConfig struct {
-	Driver          string
+	Driver           string
 	ConnectionString string
-	MaxOpenConns    int
-	MaxIdleConns    int
-	ConnMaxLifetime time.Duration
+	MaxOpenConns     int
+	MaxIdleConns     int
+	ConnMaxLifetime  time.Duration
 }
 
 // RateLimitConfig holds rate limiting configuration
@@ -56,37 +62,23 @@ type RateLimitConfig struct {
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() *Config {
-	return &Config{
-		Server: ServerConfig{
-			Port:         getEnv("SERVER_PORT", "8080"),
-			ReadTimeout:  getDurationEnv("SERVER_READ_TIMEOUT", 10*time.Second),
-			WriteTimeout: getDurationEnv("SERVER_WRITE_TIMEOUT", 10*time.Second),
-			IdleTimeout:  getDurationEnv("SERVER_IDLE_TIMEOUT", 60*time.Second),
-		},
-		Cache: CacheConfig{
-			TTL:             getDurationEnv("CACHE_TTL", 5*time.Minute),
-			CleanupInterval: getDurationEnv("CACHE_CLEANUP_INTERVAL", 10*time.Minute),
-			MaxSize:         getIntEnv("CACHE_MAX_SIZE", 10000),
-		},
-		Metrics: MetricsConfig{
-			Enabled: getBoolEnv("METRICS_ENABLED", true),
-			Port:    getEnv("METRICS_PORT", "9090"),
-			Path:    getEnv("METRICS_PATH", "/metrics"),
-		},
-		Database: DatabaseConfig{
-			Driver:          getEnv("DB_DRIVER", "memory"),
-			ConnectionString: getEnv("DB_CONNECTION_STRING", ""),
-			MaxOpenConns:    getIntEnv("DB_MAX_OPEN_CONNS", 25),
-			MaxIdleConns:    getIntEnv("DB_MAX_IDLE_CONNS", 5),
-			ConnMaxLifetime: getDurationEnv("DB_CONN_MAX_LIFETIME", 5*time.Minute),
-		},
-		RateLimit: RateLimitConfig{
-			Enabled:    getBoolEnv("RATE_LIMIT_ENABLED", true),
-			RPS:        getIntEnv("RATE_LIMIT_RPS", 1000),
-			BurstSize:  getIntEnv("RATE_LIMIT_BURST", 2000),
-			WindowSize: getDurationEnv("RATE_LIMIT_WINDOW", time.Minute),
-		},
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = "dev" // fallback to dev if not set
 	}
+
+	path := fmt.Sprintf("config/config.%s.yml", env)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Fatalf("failed to read config file '%s': %v", path, err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		log.Fatalf("failed to unmarshal config: %v", err)
+	}
+
+	return &cfg
 }
 
 // getEnv gets an environment variable with a default value

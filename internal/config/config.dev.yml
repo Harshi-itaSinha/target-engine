@@ -1,0 +1,35 @@
+server:
+  port: "8080"
+  readTimeout: "10s"
+  writeTimeout: "10s"
+  idleTimeout: "60s"
+
+cache:
+  ttl: "5m"
+  cleanupInterval: "10m"
+  maxSize: 10000
+
+metrics:
+  enabled: true
+  port: "9090"
+  path: "/metrics"
+
+database:
+  driver: "mongo"
+  uri: "mongodb+srv://harshitasinha0106:zpLgnVTJtBDT2WU9@storagecluster.hkcfguj.mongodb.net/mydb?retryWrites=true&w=majority"
+  name: "targeting_engine"
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: "5m"
+
+rateLimit:
+  enabled: true
+  rps: 1000
+  burstSize: 2000
+  windowSize: "1m"
+  
+grafana:
+  enabled: true
+  dashboardURL: "http://localhost:3000/d/your-dashboard-id/targeting-engine"
+  apiKey: "your-grafana-api-key"
+  datasource: "Prometheus"

@@ -199,10 +199,10 @@ func (s *TargetingService) getFromQueryCache(key string) []*model.DeliveryRespon
 	s.cache.mutex.RLock()
 	defer s.cache.mutex.RUnlock()
 
-	// // Check if cache is still valid
-	// if time.Since(s.cache.lastUpdate) > s.config.Cache.TTL {
-	// 	return nil
-	// }
+	// Check if cache is still valid
+	if time.Since(s.cache.lastUpdate) > s.config.Cache.TTL {
+		return nil
+	}
 
 	if result, exists := s.cache.queryCache[key]; exists {
 		return result
@@ -271,15 +271,15 @@ func (s *TargetingService) refreshCache() error {
 
 // startCacheRefreshWorker starts a background worker to refresh cache periodically
 func (s *TargetingService) startCacheRefreshWorker() {
-	// // ticker := time.NewTicker(s.config.Cache.CleanupInterval)
-	// defer ticker.Stop()
+	ticker := time.NewTicker(s.config.Cache.CleanupInterval)
+	defer ticker.Stop()
 
-	// for range ticker.C {
-	// 	if err := s.refreshCache(); err != nil {
-	// 		// In production, use proper logging
-	// 		fmt.Printf("Failed to refresh cache: %v\n", err)
-	// 	}
-	// }
+	for range ticker.C {
+		if err := s.refreshCache(); err != nil {
+			// In production, use proper logging
+			fmt.Printf("Failed to refresh cache: %v\n", err)
+		}
+	}
 }
 
 // GetCacheStats returns cache statistics for monitoring
