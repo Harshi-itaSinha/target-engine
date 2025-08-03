@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -75,10 +76,10 @@ func LoadConfig() *Config {
 		env = "dev" // fallback to dev if not set
 	}
 
-	path := fmt.Sprintf("internal/config/config.%s.yml", env)
-	data, err := ioutil.ReadFile(path)
+	getConfigPath:= getConfigPath("config.dev.yml")
+	data, err := ioutil.ReadFile(getConfigPath)
 	if err != nil {
-		log.Fatalf("failed to read config file '%s': %v", path, err)
+		log.Fatalf("failed to read config file '%s': %v",getConfigPath, err)
 	}
 
 	var cfg Config
@@ -95,6 +96,14 @@ func LoadConfig() *Config {
 // 	}
 // 	return defaultValue
 // }
+func getConfigPath(filename string) string {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Working directory:", wd)
+	return filepath.Join(wd, "internal", "config", filename)
+}
 
 func GetEnv(key string) string {
 	return os.Getenv(key)
