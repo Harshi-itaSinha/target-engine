@@ -23,5 +23,4 @@ vendor/
 *.log
 
 # Ignore configuration
-
 .env
