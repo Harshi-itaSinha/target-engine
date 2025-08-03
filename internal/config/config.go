@@ -31,9 +31,9 @@ type ServerConfig struct {
 
 // CacheConfig holds cache configuration
 type CacheConfig struct {
-	TTL             time.Duration
-	CleanupInterval time.Duration
-	MaxSize         int
+	TTL             time.Duration `yaml:"ttl"`
+	CleanupInterval time.Duration `yaml:"cleanupInterval"`
+	MaxSize         int           `yaml:"maxSize"`
 }
 
 // MetricsConfig holds metrics configuration
@@ -45,12 +45,12 @@ type MetricsConfig struct {
 
 // DatabaseConfig holds database configuration
 type DatabaseConfig struct {
-	Driver           string
-	ConnectionString string
-	MaxOpenConns     int
-	MaxIdleConns     int
-	ConnMaxLifetime  time.Duration
-	DatabaseName     string // add in file 
+	Driver           string        `yaml:"driver"`
+	ConnectionString string        `yaml:"uri"`
+	MaxOpenConns     int           `yaml:"maxOpenConns"`
+	MaxIdleConns     int           `yaml:"maxIdleConns"`
+	ConnMaxLifetime  time.Duration `yaml:"connMaxLifetime"`
+	DatabaseName     string        `yaml:"name"`
 }
 
 // RateLimitConfig holds rate limiting configuration
@@ -68,7 +68,7 @@ func LoadConfig() *Config {
 		env = "dev" // fallback to dev if not set
 	}
 
-	path := fmt.Sprintf("config/config.%s.yml", env)
+	path := fmt.Sprintf("internal/config/config.%s.yml", env)
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Fatalf("failed to read config file '%s': %v", path, err)
@@ -78,7 +78,7 @@ func LoadConfig() *Config {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		log.Fatalf("failed to unmarshal config: %v", err)
 	}
-
+	log.Printf("Loaded config: %+v\n", cfg)
 	return &cfg
 }
 

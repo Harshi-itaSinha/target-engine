@@ -1,9 +1,11 @@
-// package service contains the business logic for targeting 
+// Package service contains the business logic for targeting
 package service
 
 import (
 	"context"
+	
 	"fmt"
+
 	"strings"
 	"sync"
 	"time"
@@ -104,27 +106,20 @@ func (s *TargetingService) generateCacheKey(req *models.DeliveryRequest) string 
 // findMatchingCampaigns finds campaigns that match the targeting criteria
 func (s *TargetingService) findMatchingCampaigns(ctx context.Context, req *models.DeliveryRequest) ([]*models.DeliveryResponse, error) {
 
-	// activeCampaigns, err := s.repo.Campaign().GetActiveCampaigns(ctx)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get active campaigns: %w", err)
-	// }
-	// if len(activeCampaigns) == 0 {
-	// 	return nil, nil // HTTP 204
-	// }
-
-	// 3. Query matching campaign IDs from the inverted index
 	dimensions := []models.Dimension{
-		{Name: "OS", Value: req.OS},
-		{Name: "Country", Value: req.Country},
-		{Name: "App", Value: req.App},
+		{Name: "os", Value: req.OS},
+		{Name: "country", Value: req.Country},
+		{Name: "app", Value: req.App},
 	}
 
 	validCampaignIDs, err := s.repo.Campaign().GetMatchingCampaignIDs(ctx, dimensions)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get matching campaign IDs: %w", err)
 	}
 
 	campaigns, err := s.repo.Campaign().GetCampaignsByIDs(ctx, validCampaignIDs)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get campaigns by IDs: %w", err)
 	}

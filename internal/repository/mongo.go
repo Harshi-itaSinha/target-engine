@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	models "github.com/Harshi-itaSinha/target-engine/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type MongoCampaignRepo struct {
@@ -17,14 +19,14 @@ type MongoCampaignRepo struct {
 
 func NewMongoCampaignRepo(db *mongo.Database) *MongoCampaignRepo {
 	return &MongoCampaignRepo{
-		collection: db.Collection("campaigns"),
+		collection: db.Collection("target-engine"),
 	}
 }
 
 const (
 	CollectionCampaigns      = "campaigns"
 	CollectionTargetingRules = "targeting_rules"
-	CollectionActiveCampaign = "active_campaign" // pre-computed
+	CollectionActiveCampaign = "active_targeting_rules" // pre-computed
 )
 
 type RepositoryImpl struct {
@@ -175,23 +177,28 @@ func (r *RepositoryImpl) GetCampaignsByIDs(ctx context.Context, ids []string) ([
 		return nil, nil
 	}
 
-	filter := bson.M{"_id": bson.M{"$in": ids}}
+	filter := bson.M{"cid": bson.M{"$in": ids}}
 	cursor, err := r.GetCollection(CollectionCampaigns).Find(ctx, filter)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch campaigns by IDs: %w", err)
+		return nil, fmt.Errorf("failed to fetch campaigns by cid: %w", err)
 	}
 	defer cursor.Close(ctx)
 
-	var campaigns []*models.Campaign
+	campaigns := []*models.Campaign{}
 	if err := cursor.All(ctx, &campaigns); err != nil {
-		return nil, fmt.Errorf("failed to decode all campaigns: %w", err)
+		return nil, fmt.Errorf("failed to decode campaigns: %w", err)
 	}
 
+	log.Printf("Found %d campaigns using cid field", len(campaigns))
+	
 	if len(campaigns) == 0 {
 		return nil, nil
 	}
+    
 
 	return campaigns, nil
+	
+
 
 }
 
@@ -224,40 +231,55 @@ func (r *RepositoryImpl) CreateCampaign(ctx context.Context, campaign *models.Ca
 }
 
 func buildMappingMatchPipeline(dimensions []models.Dimension) mongo.Pipeline {
+
+
+	//Build filters for each dimension-value pair
 	filters := bson.A{}
 	for _, d := range dimensions {
-		filters = append(filters,
-			// type: include → request value must be in values
-			bson.M{
-				"dimension": d.Name,
-				"type":      "include",
-				"values":    bson.M{"$in": []string{d.Value}},
-			},
-			// type: exclude → request value must NOT be in values
-			bson.M{
-				"dimension": d.Name,
-				"type":      "exclude",
-				"values":    bson.M{"$nin": []string{d.Value}},
-			},
-			// type: none → always match
-			bson.M{
-				"dimension": d.Name,
-				"type":      nil, // none
-			},
-		)
+		dimensionFilter := bson.D{
+			{Key: "dimension", Value: d.Name}, // Match specific dimension
+			{Key: "$or", Value: bson.A{
+				bson.D{
+					{Key: "type", Value: "include"},
+					{Key: "values", Value: bson.D{{Key: "$in", Value: bson.A{d.Value}}}},
+				},
+				bson.D{
+					{Key: "type", Value: "exclude"},
+					{Key: "values", Value: bson.D{{Key: "$nin", Value: bson.A{d.Value}}}},
+				},
+				bson.D{{Key: "type", Value: primitive.Null{}}}, // Handle null type
+			}},
+		}
+
+		
+		filters = append(filters, dimensionFilter)
 	}
 
+	
 	pipeline := mongo.Pipeline{
-		{{Key: "$match", Value: bson.M{"$or": filters}}},
-		{{Key: "$group", Value: bson.M{
-			"_id":        "$campaign_id",
-			"matchCount": bson.M{"$sum": 1},
+		//Stage 1: Match documents for any dimension
+		{{Key: "$match", Value: bson.D{{Key: "$or", Value: filters}}}},
+		
+		//Stage 2: Group by campaign_id and collect covered dimensions
+		{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$campaign_id"},
+			{Key: "coveredDimensions", Value: bson.D{{Key: "$addToSet", Value: "$dimension"}}},
 		}}},
-		{{Key: "$match", Value: bson.M{
-			"matchCount": len(dimensions),
+		
+		// Stage 3: Filter campaigns that cover all required dimensions
+		{{Key: "$match", Value: bson.D{
+			{Key: "coveredDimensions", Value: bson.D{{Key: "$size", Value: len(dimensions)}}},
+		}}},
+		
+		//Stage 4: Project the final result
+		{{Key: "$project", Value: bson.D{
+			{Key: "campaign_id", Value: "$_id"},
+			{Key: "_id", Value: 0},
 		}}},
 	}
+
 	return pipeline
+
 }
 
 func fetchValidCampaignIDs(ctx context.Context, collection *mongo.Collection, pipeline mongo.Pipeline) ([]string, error) {
@@ -269,14 +291,16 @@ func fetchValidCampaignIDs(ctx context.Context, collection *mongo.Collection, pi
 
 	var campaignIDs []string
 	for cursor.Next(ctx) {
+		
 		var result struct {
-			ID string `bson:"_id"`
+			ID string `bson:"campaign_id"`
 		}
 		if err := cursor.Decode(&result); err != nil {
 			continue
 		}
 		campaignIDs = append(campaignIDs, result.ID)
 	}
+	
 	return campaignIDs, nil
 }
 

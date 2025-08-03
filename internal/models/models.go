@@ -4,14 +4,16 @@ import "time"
 
 // Campaign represents an advertising campaign
 type Campaign struct {
-	ID        string    `json:"cid" db:"id"`
-	Name      string    `json:"name" db:"name"`
-	Image     string    `json:"img" db:"image"`
-	CTA       string    `json:"cta" db:"cta"`
-	Status    string    `json:"status" db:"status"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID        string    `bson:"cid" json:"cid"` // Mongo `_id` mapped to ID
+	Name      string    `bson:"name" json:"name"`
+	Image     string    `bson:"img" json:"img"`
+	CTA       string    `bson:"cta" json:"cta"`
+	Status    string    `bson:"status" json:"status"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }
+
+//
 
 // TargetingRule represents targeting criteria for campaigns
 type TargetingRule struct {
@@ -42,8 +44,8 @@ type DeliveryResponse struct {
 }
 
 type Dimension struct {
-    Name  string
-    Value string
+	Name  string
+	Value string
 }
 
 // ErrorResponse represents error response structure

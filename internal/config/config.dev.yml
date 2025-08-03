@@ -17,7 +17,7 @@ metrics:
 database:
   driver: "mongo"
   uri: "mongodb+srv://harshitasinha0106:zpLgnVTJtBDT2WU9@storagecluster.hkcfguj.mongodb.net/mydb?retryWrites=true&w=majority"
-  name: "targeting_engine"
+  name: "target-engine"
   maxOpenConns: 25
   maxIdleConns: 5
   connMaxLifetime: "5m"
@@ -27,7 +27,7 @@ rateLimit:
   rps: 1000
   burstSize: 2000
   windowSize: "1m"
-  
+
 grafana:
   enabled: true
   dashboardURL: "http://localhost:3000/d/your-dashboard-id/targeting-engine"
