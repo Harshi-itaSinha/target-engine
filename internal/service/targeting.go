@@ -1,3 +1,4 @@
+// package service contains the business logic for targeting 
 package service
 
 import (
@@ -7,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/Harshi-itaSinha/target-engine/internal/config"
-	"github.com/Harshi-itaSinha/target-engine/internal/models"
+	models "github.com/Harshi-itaSinha/target-engine/internal/models"
 	"github.com/Harshi-itaSinha/target-engine/internal/repository"
+	"github.com/go-playground/validator/v10"
 )
 
 // TargetingService handles the core business logic for campaign targeting
@@ -24,9 +25,9 @@ type TargetingService struct {
 
 // targetingCache represents an in-memory cache for targeting data
 type targetingCache struct {
-	campaigns      map[string]*model.Campaign
-	targetingRules map[string][]*model.TargetingRule
-	queryCache     map[string][]*model.DeliveryResponse
+	campaigns      map[string]*models.Campaign
+	targetingRules map[string][]*models.TargetingRule
+	queryCache     map[string][]*models.DeliveryResponse
 	mutex          sync.RWMutex
 	lastUpdate     time.Time
 }
@@ -37,9 +38,9 @@ func NewTargetingService(repo repository.Repository, cfg *config.Config) *Target
 		repo:   repo,
 		config: cfg,
 		cache: &targetingCache{
-			campaigns:      make(map[string]*model.Campaign),
-			targetingRules: make(map[string][]*model.TargetingRule),
-			queryCache:     make(map[string][]*model.DeliveryResponse),
+			campaigns:      make(map[string]*models.Campaign),
+			targetingRules: make(map[string][]*models.TargetingRule),
+			queryCache:     make(map[string][]*models.DeliveryResponse),
 		},
 	}
 
@@ -53,7 +54,7 @@ func NewTargetingService(repo repository.Repository, cfg *config.Config) *Target
 }
 
 // GetMatchingCampaigns returns campaigns that match the targeting criteria
-func (s *TargetingService) GetMatchingCampaigns(ctx context.Context, req *model.DeliveryRequest) ([]*model.DeliveryResponse, error) {
+func (s *TargetingService) GetMatchingCampaigns(ctx context.Context, req *models.DeliveryRequest) ([]*models.DeliveryResponse, error) {
 	// Validate request
 	if err := s.validateRequest(req); err != nil {
 		return nil, err
@@ -81,14 +82,14 @@ func (s *TargetingService) GetMatchingCampaigns(ctx context.Context, req *model.
 }
 
 // validateRequest validates the delivery request
-func (s *TargetingService) validateRequest(req *model.DeliveryRequest) error {
+func (s *TargetingService) validateRequest(req *models.DeliveryRequest) error {
 	var validate = validator.New()
 	return validate.Struct(req)
 }
 
 // normalizeRequest normalizes request parameters for consistent matching
-func (s *TargetingService) normalizeRequest(req *model.DeliveryRequest) *model.DeliveryRequest {
-	return &model.DeliveryRequest{
+func (s *TargetingService) normalizeRequest(req *models.DeliveryRequest) *models.DeliveryRequest {
+	return &models.DeliveryRequest{
 		App:     strings.TrimSpace(req.App),
 		Country: strings.ToUpper(strings.TrimSpace(req.Country)),
 		OS:      strings.TrimSpace(req.OS),
@@ -96,34 +97,57 @@ func (s *TargetingService) normalizeRequest(req *model.DeliveryRequest) *model.D
 }
 
 // generateCacheKey generates a cache key for the request
-func (s *TargetingService) generateCacheKey(req *model.DeliveryRequest) string {
+func (s *TargetingService) generateCacheKey(req *models.DeliveryRequest) string {
 	return fmt.Sprintf("%s|%s|%s", req.App, req.Country, strings.ToLower(req.OS))
 }
 
 // findMatchingCampaigns finds campaigns that match the targeting criteria
-func (s *TargetingService) findMatchingCampaigns(ctx context.Context, req *model.DeliveryRequest) ([]*model.DeliveryResponse, error) {
-	s.cache.mutex.RLock()
-	defer s.cache.mutex.RUnlock()
+func (s *TargetingService) findMatchingCampaigns(ctx context.Context, req *models.DeliveryRequest) ([]*models.DeliveryResponse, error) {
 
-	var matches []*model.DeliveryResponse
+	// activeCampaigns, err := s.repo.Campaign().GetActiveCampaigns(ctx)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to get active campaigns: %w", err)
+	// }
+	// if len(activeCampaigns) == 0 {
+	// 	return nil, nil // HTTP 204
+	// }
 
-	for campaignID, campaign := range s.cache.campaigns {
-		// Only consider active campaigns
-		if !campaign.IsActive() {
-			continue
-		}
-
-		// Check if campaign matches targeting rules
-		if s.campaignMatches(campaignID, req) {
-			matches = append(matches, campaign.ToDeliveryResponse())
-		}
+	// 3. Query matching campaign IDs from the inverted index
+	dimensions := []models.Dimension{
+		{Name: "OS", Value: req.OS},
+		{Name: "Country", Value: req.Country},
+		{Name: "App", Value: req.App},
 	}
 
+	validCampaignIDs, err := s.repo.Campaign().GetMatchingCampaignIDs(ctx, dimensions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get matching campaign IDs: %w", err)
+	}
+
+	campaigns, err := s.repo.Campaign().GetCampaignsByIDs(ctx, validCampaignIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get campaigns by IDs: %w", err)
+	}
+
+	if len(campaigns) == 0 {
+		return nil, nil
+	}
+
+	matches := MarshalCampaignsToDeliveryResponses(campaigns) // takes []*models.Campaign
 	return matches, nil
+
+}
+
+func MarshalCampaignsToDeliveryResponses(campaigns []*models.Campaign) []*models.DeliveryResponse {
+	matches := make([]*models.DeliveryResponse, 0, len(campaigns))
+	for _, c := range campaigns {
+		matches = append(matches, c.ToDeliveryResponse())
+	}
+	return matches
 }
 
 // campaignMatches checks if a campaign matches the targeting criteria
-func (s *TargetingService) campaignMatches(campaignID string, req *model.DeliveryRequest) bool {
+func (s *TargetingService) campaignMatches(campaignID string, req *models.DeliveryRequest) bool {
 	rules, exists := s.cache.targetingRules[campaignID]
 	if !exists || len(rules) == 0 {
 		// No targeting rules means the campaign matches all requests
@@ -141,7 +165,7 @@ func (s *TargetingService) campaignMatches(campaignID string, req *model.Deliver
 }
 
 // ruleMatches checks if a single targeting rule matches the request
-func (s *TargetingService) ruleMatches(rule *model.TargetingRule, req *model.DeliveryRequest) bool {
+func (s *TargetingService) ruleMatches(rule *models.TargetingRule, req *models.DeliveryRequest) bool {
 	// Check country targeting
 	if !s.matchesDimension(req.Country, rule.IncludeCountry, rule.ExcludeCountry, true) {
 		return false
@@ -195,7 +219,7 @@ func (s *TargetingService) containsValue(slice []string, value string, caseSensi
 }
 
 // getFromQueryCache retrieves a cached query result
-func (s *TargetingService) getFromQueryCache(key string) []*model.DeliveryResponse {
+func (s *TargetingService) getFromQueryCache(key string) []*models.DeliveryResponse {
 	s.cache.mutex.RLock()
 	defer s.cache.mutex.RUnlock()
 
@@ -211,7 +235,7 @@ func (s *TargetingService) getFromQueryCache(key string) []*model.DeliveryRespon
 }
 
 // setToQueryCache stores a query result in cache
-func (s *TargetingService) setToQueryCache(key string, result []*model.DeliveryResponse) {
+func (s *TargetingService) setToQueryCache(key string, result []*models.DeliveryResponse) {
 	s.cache.mutex.Lock()
 	defer s.cache.mutex.Unlock()
 
@@ -249,9 +273,9 @@ func (s *TargetingService) refreshCache() error {
 	defer s.cache.mutex.Unlock()
 
 	// Clear existing cache
-	s.cache.campaigns = make(map[string]*model.Campaign)
-	s.cache.targetingRules = make(map[string][]*model.TargetingRule)
-	s.cache.queryCache = make(map[string][]*model.DeliveryResponse) // Clear query cache too
+	s.cache.campaigns = make(map[string]*models.Campaign)
+	s.cache.targetingRules = make(map[string][]*models.TargetingRule)
+	s.cache.queryCache = make(map[string][]*models.DeliveryResponse) // Clear query cache too
 
 	// Populate campaigns
 	for _, campaign := range campaigns {

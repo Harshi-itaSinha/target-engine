@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Harshi-itaSinha/target-engine/internal/config"
+	"github.com/Harshi-itaSinha/target-engine/internal/database.go"
 	"github.com/Harshi-itaSinha/target-engine/internal/handler"
 	"github.com/Harshi-itaSinha/target-engine/internal/middleware"
 	"github.com/Harshi-itaSinha/target-engine/internal/repository"
@@ -21,8 +22,28 @@ import (
 func main() {
 
 	cfg := config.LoadConfig()
-	repo := repository.NewMemoryRepository()
+	// repo := repository.NewMemoryRepository()
+	// defer repo.Close()
+
+	// 2. Initialize MongoDB client
+	dbClient, err := database.NewMongoClient(cfg.Database.ConnectionString)
+	if err != nil {
+		log.Fatalf("Failed to initialize MongoDB client: %v", err)
+	}
+	
+
+	// 3. Get the database
+	database := dbClient.Database(cfg.Database.DatabaseName)
+
+	// 4. Initialize repository with MongoDB database and client
+	repo := repository.NewRepository(database, dbClient)
+	defer func() {
+		if err := repo.Close(); err != nil {
+			log.Printf("Failed to close repository: %v", err)
+		}
+	}()
 	defer repo.Close()
+
 	targetingService := service.NewTargetingService(repo, cfg)
 
 	deliveryHandler := handler.NewDeliveryHandler(targetingService)

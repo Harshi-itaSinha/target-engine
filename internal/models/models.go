@@ -41,6 +41,11 @@ type DeliveryResponse struct {
 	CTA   string `json:"cta"`
 }
 
+type Dimension struct {
+    Name  string
+    Value string
+}
+
 // ErrorResponse represents error response structure
 type ErrorResponse struct {
 	Error   string `json:"error"`

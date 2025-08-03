@@ -50,6 +50,7 @@ type DatabaseConfig struct {
 	MaxOpenConns     int
 	MaxIdleConns     int
 	ConnMaxLifetime  time.Duration
+	DatabaseName     string // add in file 
 }
 
 // RateLimitConfig holds rate limiting configuration

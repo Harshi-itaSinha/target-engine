@@ -17,7 +17,6 @@ type MemoryRepository struct {
 	nextRuleID     int64
 }
 
-
 func NewMemoryRepository() *MemoryRepository {
 	repo := &MemoryRepository{
 		campaigns:      make(map[string]*model.Campaign),
@@ -26,12 +25,10 @@ func NewMemoryRepository() *MemoryRepository {
 		nextRuleID:     1,
 	}
 
-	
 	repo.initializeSampleData()
 
 	return repo
 }
-
 
 func (r *MemoryRepository) Campaign() CampaignRepository {
 	return r
@@ -45,16 +42,13 @@ func (r *MemoryRepository) Close() error {
 	return nil
 }
 
-
 func (r *MemoryRepository) Health(ctx context.Context) error {
 	return nil
 }
 
-
 func (r *MemoryRepository) Migrate(ctx context.Context) error {
 	return nil
 }
-
 
 func (r *MemoryRepository) GetActiveCampaigns(ctx context.Context) ([]*model.Campaign, error) {
 	r.mutex.RLock()
@@ -70,6 +64,9 @@ func (r *MemoryRepository) GetActiveCampaigns(ctx context.Context) ([]*model.Cam
 	return activeCampaigns, nil
 }
 
+func (r *MemoryRepository) GetMatchingCampaignIDs(ctx context.Context, dimensions []model.Dimension) ([]string, error) {
+	return nil, nil
+}
 
 func (r *MemoryRepository) GetCampaignByID(ctx context.Context, id string) (*model.Campaign, error) {
 	r.mutex.RLock()
@@ -81,6 +78,10 @@ func (r *MemoryRepository) GetCampaignByID(ctx context.Context, id string) (*mod
 	}
 
 	return campaign, nil
+}
+
+func (r *MemoryRepository) GetCampaignsByIDs(ctx context.Context, ids []string) ([]*model.Campaign, error) {
+	return nil, nil
 }
 
 func (r *MemoryRepository) CreateCampaign(ctx context.Context, campaign *model.Campaign) error {
@@ -126,7 +127,6 @@ func (r *MemoryRepository) DeleteCampaign(ctx context.Context, id string) error 
 	return nil
 }
 
-
 func (r *MemoryRepository) UpdateCampaignStatus(ctx context.Context, id, status string) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -157,7 +157,6 @@ func (r *MemoryRepository) GetTargetingRules(ctx context.Context) ([]*model.Targ
 	return allRules, nil
 }
 
-
 func (r *MemoryRepository) GetTargetingRulesByCampaignID(ctx context.Context, campaignID string) ([]*model.TargetingRule, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -169,7 +168,6 @@ func (r *MemoryRepository) GetTargetingRulesByCampaignID(ctx context.Context, ca
 
 	return rules, nil
 }
-
 
 func (r *MemoryRepository) CreateTargetingRule(ctx context.Context, rule *model.TargetingRule) error {
 	r.mutex.Lock()
@@ -186,7 +184,6 @@ func (r *MemoryRepository) CreateTargetingRule(ctx context.Context, rule *model.
 	return nil
 }
 
-
 func (r *MemoryRepository) UpdateTargetingRule(ctx context.Context, rule *model.TargetingRule) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -198,10 +195,8 @@ func (r *MemoryRepository) UpdateTargetingRule(ctx context.Context, rule *model.
 
 	rule.UpdatedAt = time.Now()
 
-
 	r.rulesByID[rule.ID] = rule
 
-	
 	rules := r.targetingRules[existingRule.CampaignID]
 	for i, r := range rules {
 		if r.ID == rule.ID {
@@ -217,7 +212,6 @@ func (r *MemoryRepository) DeleteTargetingRule(ctx context.Context, id int64) er
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	
 	delete(r.rulesByID, id)
 
 	return nil
@@ -233,11 +227,9 @@ func (r *MemoryRepository) DeleteTargetingRulesByCampaignID(ctx context.Context,
 		return nil
 	}
 
-	
 	for _, rule := range rules {
 		delete(r.rulesByID, rule.ID)
 	}
-
 
 	delete(r.targetingRules, campaignID)
 
@@ -246,7 +238,6 @@ func (r *MemoryRepository) DeleteTargetingRulesByCampaignID(ctx context.Context,
 
 func (r *MemoryRepository) initializeSampleData() {
 	now := time.Now()
-
 
 	campaigns := []*model.Campaign{
 		{
@@ -304,13 +295,11 @@ func (r *MemoryRepository) initializeSampleData() {
 		},
 	}
 
-	
 	for _, campaign := range campaigns {
 		r.campaigns[campaign.ID] = campaign
 	}
 
-	
-	r.nextRuleID = 4 
+	r.nextRuleID = 4
 	for _, rule := range targetingRules {
 		r.targetingRules[rule.CampaignID] = append(r.targetingRules[rule.CampaignID], rule)
 		r.rulesByID[rule.ID] = rule
