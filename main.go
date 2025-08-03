@@ -110,6 +110,8 @@ func setupRouter(deliveryHandler *handler.DeliveryHandler, cfg *config.Config, m
 	apiRouter := router.PathPrefix("/v1").Subrouter()
 	apiRouter.HandleFunc("/delivery", deliveryHandler.GetCampaigns).Methods("GET")
 	apiRouter.HandleFunc("/stats", deliveryHandler.GetStats).Methods("GET")
+	apiRouter.HandleFunc("/target",deliveryHandler.CreateTargetingRule).Methods("POST")
+	apiRouter.HandleFunc("/campaign",deliveryHandler.CreateCampaign).Methods("POST")
 	router.HandleFunc("/health", deliveryHandler.Health).Methods("GET")
 
 	return router

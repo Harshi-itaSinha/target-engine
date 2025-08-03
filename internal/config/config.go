@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -89,13 +88,6 @@ func LoadConfig() *Config {
 	return &cfg
 }
 
-// getEnv gets an environment variable with a default value
-// func getEnv(key, defaultValue string) string {
-// 	if value := os.Getenv(key); value != "" {
-// 		return value
-// 	}
-// 	return defaultValue
-// }
 func getConfigPath(filename string) string {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -108,32 +100,5 @@ func getConfigPath(filename string) string {
 func GetEnv(key string) string {
 	return os.Getenv(key)
 }
-// getIntEnv gets an integer environment variable with a default value
-func getIntEnv(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
-	}
-	return defaultValue
-}
 
-// getBoolEnv gets a boolean environment variable with a default value
-func getBoolEnv(key string, defaultValue bool) bool {
-	if value := os.Getenv(key); value != "" {
-		if boolValue, err := strconv.ParseBool(value); err == nil {
-			return boolValue
-		}
-	}
-	return defaultValue
-}
 
-// getDurationEnv gets a duration environment variable with a default value
-func getDurationEnv(key string, defaultValue time.Duration) time.Duration {
-	if value := os.Getenv(key); value != "" {
-		if duration, err := time.ParseDuration(value); err == nil {
-			return duration
-		}
-	}
-	return defaultValue
-}

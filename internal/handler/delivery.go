@@ -19,6 +19,14 @@ func NewDeliveryHandler(targetingService *service.TargetingService) *DeliveryHan
 	}
 }
 
+func (h *DeliveryHandler) CreateCampaign (w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (h *DeliveryHandler) CreateTargetingRule(w http.ResponseWriter, r *http.Request){
+	
+}
+
 // GetCampaigns handles GET /v1/delivery requests
 func (h *DeliveryHandler) GetCampaigns(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
