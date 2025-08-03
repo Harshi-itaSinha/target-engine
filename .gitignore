@@ -23,4 +23,4 @@ vendor/
 *.log
 
 # Ignore configuration
-/config/config.yml
+

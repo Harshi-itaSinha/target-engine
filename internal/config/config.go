@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert/yaml"
 )
 
@@ -62,7 +63,13 @@ type RateLimitConfig struct {
 }
 
 // LoadConfig loads configuration from environment variables
+
 func LoadConfig() *Config {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+
 	env := os.Getenv("APP_ENV")
 	if env == "" {
 		env = "dev" // fallback to dev if not set
@@ -78,18 +85,20 @@ func LoadConfig() *Config {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		log.Fatalf("failed to unmarshal config: %v", err)
 	}
-	log.Printf("Loaded config: %+v\n", cfg)
 	return &cfg
 }
 
 // getEnv gets an environment variable with a default value
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
+// func getEnv(key, defaultValue string) string {
+// 	if value := os.Getenv(key); value != "" {
+// 		return value
+// 	}
+// 	return defaultValue
+// }
 
+func GetEnv(key string) string {
+	return os.Getenv(key)
+}
 // getIntEnv gets an integer environment variable with a default value
 func getIntEnv(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {

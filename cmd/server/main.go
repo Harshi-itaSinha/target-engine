@@ -26,11 +26,12 @@ func main() {
 	// defer repo.Close()
 
 	// 2. Initialize MongoDB client
-	dbClient, err := database.NewMongoClient(cfg.Database.ConnectionString)
+	uri := config.GetEnv("MONGO_URI")
+	//cfg.Database.ConnectionString
+	dbClient, err := database.NewMongoClient(uri)
 	if err != nil {
 		log.Fatalf("Failed to initialize MongoDB client: %v", err)
 	}
-	
 
 	// 3. Get the database
 	database := dbClient.Database(cfg.Database.DatabaseName)
@@ -48,7 +49,6 @@ func main() {
 
 	deliveryHandler := handler.NewDeliveryHandler(targetingService)
 
-   
 	var metrics *monitoring.Metrics
 	if cfg.Metrics.Enabled {
 		metrics = monitoring.NewMetrics()

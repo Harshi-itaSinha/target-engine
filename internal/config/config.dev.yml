@@ -16,7 +16,7 @@ metrics:
 
 database:
   driver: "mongo"
-  uri: "mongodb+srv://harshitasinha0106:zpLgnVTJtBDT2WU9@storagecluster.hkcfguj.mongodb.net/mydb?retryWrites=true&w=majority"
+  uri: ""
   name: "target-engine"
   maxOpenConns: 25
   maxIdleConns: 5
